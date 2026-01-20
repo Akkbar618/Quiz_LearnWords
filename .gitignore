@@ -1,0 +1,46 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# APK/AAB files
+*.apk
+*.aab
+*.ap_
+*.aar
+
+# Dex files
+*.dex
+
+# Java class files
+*.class
+
+# Log files
+*.log
+
+# Generated files
+bin/
+gen/
+out/
+
+# Android Profiling
+*.hprof
+
+# Backup files
+*~
+*.swp
+*.bak
+
+# Room schemas (optional - можно раскомментировать)
+# /app/schemas/
