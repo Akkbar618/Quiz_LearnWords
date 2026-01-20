@@ -166,4 +166,16 @@ interface WordDao {
      */
     @Query("DELETE FROM words WHERE id = :wordId")
     suspend fun deleteWord(wordId: Long)
+    
+    /**
+     * Найти слово по normalized original (lowercase + trim) и category.
+     * Используется для определения дубликатов при импорте.
+     */
+    @Query("""
+        SELECT * FROM words 
+        WHERE LOWER(TRIM(original)) = LOWER(TRIM(:original)) 
+        AND LOWER(TRIM(category)) = LOWER(TRIM(:category))
+        LIMIT 1
+    """)
+    suspend fun findByNormalizedOriginalAndCategory(original: String, category: String): WordEntity?
 }

@@ -35,7 +35,7 @@ private val LightColorScheme = lightColorScheme(
     error = Error,
     onError = OnError,
     errorContainer = ErrorContainer,
-    onErrorContainer = Color(0xFF410002),
+    onErrorContainer = Color(0xFF7F1D1D),
     
     background = Background,
     onBackground = OnBackground,
@@ -44,6 +44,9 @@ private val LightColorScheme = lightColorScheme(
     onSurface = OnSurface,
     surfaceVariant = SurfaceVariant,
     onSurfaceVariant = OnSurfaceVariant,
+    
+    outline = Color(0xFFD4D4D8),  // Zinc-300
+    outlineVariant = Color(0xFFE4E4E7),  // Zinc-200
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -65,7 +68,7 @@ private val DarkColorScheme = darkColorScheme(
     error = DarkError,
     onError = DarkOnError,
     errorContainer = DarkErrorContainer,
-    onErrorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFFFECACA),
     
     background = DarkBackground,
     onBackground = DarkOnBackground,
@@ -74,13 +77,16 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = DarkOnSurface,
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = DarkOnSurfaceVariant,
+    
+    outline = Color(0xFF3F3F46),  // Zinc-700
+    outlineVariant = Color(0xFF27272A),  // Zinc-800
 )
 
 @Composable
 fun QuizEngWordsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color для Android 12+
-    dynamicColor: Boolean = true,
+    // Dynamic color опционально - оставляем кастомные цвета как дефолт
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -96,7 +102,8 @@ fun QuizEngWordsTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            // Используем surface color для статус бара
+            window.statusBarColor = colorScheme.surface.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
@@ -104,6 +111,7 @@ fun QuizEngWordsTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = Shapes,
         content = content
     )
 }

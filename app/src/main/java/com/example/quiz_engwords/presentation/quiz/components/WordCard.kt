@@ -2,6 +2,7 @@ package com.example.quiz_engwords.presentation.quiz.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -10,11 +11,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
- * Карточка с английским словом для викторины.
+ * Премиум карточка с английским словом для викторины.
  * 
  * @param word английское слово
  * @param modifier модификатор
@@ -24,30 +30,74 @@ fun WordCard(
     word: String,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .wrapContentHeight()
-            .padding(horizontal = 24.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 4.dp
-        )
+            .padding(horizontal = 20.dp)
+            .shadow(
+                elevation = 16.dp,
+                shape = RoundedCornerShape(28.dp),
+                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+            )
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
+                    )
+                )
+            )
     ) {
+        // Декоративные круги на фоне
         Box(
             modifier = Modifier
+                .size(100.dp)
+                .offset(x = (-30).dp, y = (-30).dp)
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+        )
+        
+        Box(
+            modifier = Modifier
+                .size(60.dp)
+                .align(Alignment.BottomEnd)
+                .offset(x = 20.dp, y = 20.dp)
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f))
+        )
+        
+        // Основной контент
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 32.dp, horizontal = 24.dp),
-            contentAlignment = Alignment.Center
+                .padding(vertical = 48.dp, horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Метка
+            Surface(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "Translate this word",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            // Слово
             Text(
                 text = word,
                 style = MaterialTheme.typography.displayLarge,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                lineHeight = 56.sp
             )
         }
     }
@@ -64,12 +114,17 @@ fun AnimatedWordCard(
 ) {
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(500)) +
+        enter = fadeIn(animationSpec = tween(400)) +
+                scaleIn(
+                    initialScale = 0.92f,
+                    animationSpec = tween(400, easing = FastOutSlowInEasing)
+                ) +
                 slideInVertically(
-                    initialOffsetY = { -40 },
-                    animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    initialOffsetY = { -30 },
+                    animationSpec = tween(400, easing = FastOutSlowInEasing)
                 ),
-        exit = fadeOut(animationSpec = tween(300))
+        exit = fadeOut(animationSpec = tween(200)) +
+               scaleOut(targetScale = 0.95f)
     ) {
         WordCard(word = word, modifier = modifier)
     }
@@ -81,14 +136,25 @@ fun AnimatedWordCard(
 @Composable
 fun Modifier.shake(trigger: Boolean): Modifier {
     val offsetX by animateFloatAsState(
-        targetValue = if (trigger) 0f else 1f,
-        animationSpec = repeatable(
-            iterations = 3,
-            animation = tween(durationMillis = 50, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
+        targetValue = if (trigger) 1f else 0f,
+        animationSpec = if (trigger) {
+            keyframes {
+                durationMillis = 400
+                0f at 0
+                -15f at 50
+                15f at 100
+                -12f at 150
+                12f at 200
+                -8f at 250
+                8f at 300
+                -4f at 350
+                0f at 400
+            }
+        } else {
+            snap()
+        },
         label = "shake"
     )
     
-    return this.offset(x = (offsetX * 10).dp)
+    return this.offset(x = offsetX.dp)
 }

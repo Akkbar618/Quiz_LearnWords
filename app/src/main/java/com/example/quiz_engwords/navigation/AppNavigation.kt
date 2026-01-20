@@ -1,6 +1,9 @@
 package com.example.quiz_engwords.navigation
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Home
@@ -9,10 +12,12 @@ import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -26,7 +31,7 @@ import com.example.quiz_engwords.presentation.quiz.QuizScreen
 import com.example.quiz_engwords.presentation.settings.SettingsScreen
 
 /**
- * Главная навигация приложения с Bottom Navigation Bar.
+ * Главная навигация приложения с Premium Bottom Navigation Bar.
  */
 @Composable
 fun AppNavigation(
@@ -35,6 +40,7 @@ fun AppNavigation(
     onFinish: () -> Unit
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             BottomNavigationBar(navController = navController)
         }
@@ -42,7 +48,27 @@ fun AppNavigation(
         NavHost(
             navController = navController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier.padding(paddingValues),
+            enterTransition = {
+                fadeIn(animationSpec = tween(300)) + 
+                slideInHorizontally(
+                    initialOffsetX = { 30 },
+                    animationSpec = tween(300)
+                )
+            },
+            exitTransition = {
+                fadeOut(animationSpec = tween(300))
+            },
+            popEnterTransition = {
+                fadeIn(animationSpec = tween(300))
+            },
+            popExitTransition = {
+                fadeOut(animationSpec = tween(300)) +
+                slideOutHorizontally(
+                    targetOffsetX = { 30 },
+                    animationSpec = tween(300)
+                )
+            }
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -53,7 +79,23 @@ fun AppNavigation(
                 )
             }
             
-            composable(Screen.Quiz.route) {
+            composable(
+                Screen.Quiz.route,
+                enterTransition = {
+                    fadeIn(animationSpec = tween(400)) +
+                    slideInVertically(
+                        initialOffsetY = { it / 4 },
+                        animationSpec = tween(400)
+                    )
+                },
+                exitTransition = {
+                    fadeOut(animationSpec = tween(300)) +
+                    slideOutVertically(
+                        targetOffsetY = { it / 4 },
+                        animationSpec = tween(300)
+                    )
+                }
+            ) {
                 QuizScreen(
                     viewModel = androidx.lifecycle.viewmodel.compose.viewModel {
                         com.example.quiz_engwords.presentation.quiz.QuizViewModel(repository)
@@ -81,7 +123,7 @@ fun AppNavigation(
 }
 
 /**
- * Bottom Navigation Bar с иконками.
+ * Premium Bottom Navigation Bar с анимациями.
  */
 @Composable
 private fun BottomNavigationBar(
@@ -95,44 +137,65 @@ private fun BottomNavigationBar(
         return
     }
     
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp
+    ) {
         bottomNavItems.forEach { screen ->
             val selected = currentDestination?.hierarchy?.any {
                 it.route == screen.route
             } == true
             
-            val (icon, label) = when (screen) {
-                Screen.Home -> {
-                    val icon = if (selected) Icons.Filled.Home else Icons.Outlined.Home
-                    icon to "Home"
-                }
-                Screen.Dictionary -> {
-                    val icon = if (selected) Icons.Filled.Book else Icons.Outlined.Book
-                    icon to "Dictionary"
-                }
-                Screen.Settings -> {
-                    val icon = if (selected) Icons.Filled.Settings else Icons.Outlined.Settings
-                    icon to "Settings"
-                }
-                else -> Icons.Outlined.Home to "Unknown"
+            val (selectedIcon, unselectedIcon, label) = when (screen) {
+                Screen.Home -> Triple(Icons.Filled.Home, Icons.Outlined.Home, "Главная")
+                Screen.Dictionary -> Triple(Icons.Filled.Book, Icons.Outlined.Book, "Словарь")
+                Screen.Settings -> Triple(Icons.Filled.Settings, Icons.Outlined.Settings, "Настройки")
+                else -> Triple(Icons.Outlined.Home, Icons.Outlined.Home, "Unknown")
             }
             
+            // Анимация масштаба иконки
+            val scale by animateFloatAsState(
+                targetValue = if (selected) 1.1f else 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "icon_scale"
+            )
+            
             NavigationBarItem(
-                icon = { Icon(icon, contentDescription = label) },
-                label = { Text(label) },
+                icon = { 
+                    Icon(
+                        imageVector = if (selected) selectedIcon else unselectedIcon, 
+                        contentDescription = label,
+                        modifier = Modifier
+                            .size(26.dp)
+                            .scale(scale)
+                    )
+                },
+                label = { 
+                    Text(
+                        text = label,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                    )
+                },
                 selected = selected,
                 onClick = {
                     navController.navigate(screen.route) {
-                        // Pop up to the start destination
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
-                        // Avoid multiple copies
                         launchSingleTop = true
-                        // Restore state
                         restoreState = true
                     }
-                }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                )
             )
         }
     }

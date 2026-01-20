@@ -1,8 +1,12 @@
 package com.example.quiz_engwords.presentation.settings
 
-import android.content.Context
+import android.content.ContentResolver
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.quiz_engwords.data.export.DictionaryExportService
+import com.example.quiz_engwords.data.export.DictionaryImportService
+import com.example.quiz_engwords.data.local.dao.WordDao
 import com.example.quiz_engwords.data.repository.WordRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,8 +29,8 @@ data class SettingsUiState(
  * Events для Settings экрана.
  */
 sealed class SettingsEvent {
-    object ExportData : SettingsEvent()
-    data class ImportData(val jsonContent: String) : SettingsEvent()
+    data class ExportToUri(val uri: Uri) : SettingsEvent()
+    data class ImportFromUri(val uri: Uri) : SettingsEvent()
     data class ThemeChanged(val isDark: Boolean) : SettingsEvent()
     object ClearMessages : SettingsEvent()
 }
@@ -35,90 +39,79 @@ sealed class SettingsEvent {
  * ViewModel для Settings экрана.
  */
 class SettingsViewModel(
-    private val repository: WordRepository
+    private val repository: WordRepository,
+    private val wordDao: WordDao,
+    private val contentResolver: ContentResolver
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
     
+    private val exportService by lazy {
+        DictionaryExportService(repository, contentResolver)
+    }
+    
+    private val importService by lazy {
+        DictionaryImportService(wordDao, contentResolver)
+    }
+    
     fun onEvent(event: SettingsEvent) {
         when (event) {
-            is SettingsEvent.ExportData -> exportData()
-            is SettingsEvent.ImportData -> importData(event.jsonContent)
+            is SettingsEvent.ExportToUri -> exportToUri(event.uri)
+            is SettingsEvent.ImportFromUri -> importFromUri(event.uri)
             is SettingsEvent.ThemeChanged -> updateTheme(event.isDark)
             is SettingsEvent.ClearMessages -> clearMessages()
         }
     }
     
     /**
-     * Экспорт данных в JSON.
-     * Возвращает JSON string через uiState.
+     * Экспорт словаря в JSON файл по указанному Uri.
      */
-    fun exportData(): String? {
-        var jsonResult: String? = null
+    private fun exportToUri(uri: Uri) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, exportMessage = null) }
             
-            try {
-                val words = repository.getAllWords()
-                
-                // Простой JSON export (можно улучшить с kotlinx.serialization)
-                val json = buildString {
-                    append("[\n")
-                    words.forEachIndexed { index, word ->
-                        append("  {\n")
-                        append("    \"original\": \"${word.original}\",\n")
-                        append("    \"translate\": \"${word.translate}\",\n")
-                        append("    \"category\": \"${word.category}\"\n")
-                        append("  }")
-                        if (index < words.size - 1) append(",")
-                        append("\n")
-                    }
-                    append("]")
-                }
-                
-                jsonResult = json
-                
+            val result = exportService.exportDictionary(uri)
+            
+            if (result.success) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        exportMessage = "Exported ${words.size} words"
+                        exportMessage = "Экспортировано ${result.exportedCount} слов"
                     )
                 }
-            } catch (e: Exception) {
+            } else {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "Export failed: ${e.message}"
+                        error = result.errorMessage ?: "Ошибка экспорта"
                     )
                 }
             }
         }
-        return jsonResult
     }
     
     /**
-     * Импорт данных из JSON.
+     * Импорт словаря из JSON файла по указанному Uri.
      */
-    private fun importData(jsonContent: String) {
+    private fun importFromUri(uri: Uri) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, importMessage = null) }
             
-            try {
-                // TODO: Реализовать парсинг с kotlinx.serialization
-                // Сейчас просто заглушка
-                
+            val result = importService.importDictionary(uri)
+            
+            if (result.success) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        importMessage = "Import functionality coming soon"
+                        importMessage = result.toUserMessage()
                     )
                 }
-            } catch (e: Exception) {
+            } else {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "Import failed: ${e.message}"
+                        error = result.errorMessage ?: "Ошибка импорта"
                     )
                 }
             }
